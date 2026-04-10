@@ -1036,36 +1036,38 @@ function parseItem(raw) {
   const s = raw.trim();
   if (!s) return null;
 
-  // Pattern 1: weight-based — "150g chicken curry", "200 gm paneer", "100 gram dal"
-  const weightMatch = s.match(/^(\d+(?:\.\d+)?)\s*(?:g|gm|gram|grams)\s+(.+)$/i);
+  // Pattern 1: weight/volume-based — "150g chicken", "200 gm paneer", "500ml milk", "500 ml milk"
+  const weightMatch = s.match(/^(\d+(?:\.\d+)?)\s*(?:ml|millilitre|milliliter|litre|liter|l\b|g|gm|gram|grams)\s+(.+)$/i);
   if (weightMatch) {
-    const grams = parseFloat(weightMatch[1]);
+    const rawUnit = s.match(/^[\d.]+\s*(ml|millilitre|milliliter|litre|liter|l\b|g|gm|gram|grams)/i)?.[1]?.toLowerCase() || 'g';
+    // Convert ml to grams (approx 1:1 for water-based drinks, use 1.03 for milk)
+    const isVolume = /ml|millilitre|milliliter|litre|liter|^l$/.test(rawUnit);
+    const rawQty = parseFloat(weightMatch[1]);
+    const grams = isVolume ? rawQty * 1.03 : rawQty; // ml ≈ g for liquids
     const foodName = weightMatch[2].trim();
+    const displayUnit = isVolume ? `${rawQty}ml` : `${rawQty}g`;
     const food = findFood(foodName);
     if (food) {
-      // Scale from per-100g values
       const scale = grams / 100;
-      const perUnitCal = ri(food.cal / food.ug * 100); // cal per 100g
-      const perUnitP   = rf(food.p  / food.ug * 100);
-      const perUnitC   = rf(food.c  / food.ug * 100);
-      const perUnitF   = rf(food.f  / food.ug * 100);
+      const per100Cal = ri(food.cal / food.ug * 100);
+      const per100P   = rf(food.p   / food.ug * 100);
+      const per100C   = rf(food.c   / food.ug * 100);
+      const per100F   = rf(food.f   / food.ug * 100);
       return {
         name: food.n,
-        displayName: foodName,
+        displayName: `${foodName} (${displayUnit})`,
         qty: 1,
-        qtyLabel: `${grams}g`,
-        unitName: 'g',
+        qtyLabel: displayUnit,
+        unitName: isVolume ? 'ml' : 'g',
         gramsPerUnit: grams,
-        perUnit: {cal: ri(perUnitCal*scale/1*1), p: rf(perUnitP*scale), c: rf(perUnitC*scale), f: rf(perUnitF*scale)},
-        // store per100g for recalc
-        per100: {cal: perUnitCal, p: perUnitP, c: perUnitC, f: perUnitF},
+        perUnit: {cal: ri(per100Cal * scale), p: rf(per100P * scale), c: rf(per100C * scale), f: rf(per100F * scale)},
+        per100: {cal: per100Cal, p: per100P, c: per100C, f: per100F},
         source: 'local',
         hasOil: food.oil,
         grams,
       };
     }
-    // Unknown food with weight — return empty editable card
-    return { name: foodName, displayName: foodName, qty:1, qtyLabel:`${grams}g`, unitName:'g', gramsPerUnit:grams, perUnit:{cal:0,p:0,c:0,f:0}, per100:{cal:0,p:0,c:0,f:0}, source:'manual', hasOil:false, grams };
+    return { name: foodName, displayName: `${foodName} (${displayUnit})`, qty:1, qtyLabel:displayUnit, unitName: isVolume?'ml':'g', gramsPerUnit:grams, perUnit:{cal:0,p:0,c:0,f:0}, per100:{cal:0,p:0,c:0,f:0}, source:'manual', hasOil:false, grams };
   }
 
   // Pattern 2: count + unit keyword + food — "3 piece chicken curry", "2 katori dal", "1 scoop protein"
@@ -1271,7 +1273,7 @@ Respond ONLY with a JSON array, no markdown, no explanation:
 [{"name":"...","qty":1,"unit":"piece","grams":30,"cal":80,"p":2.7,"c":15,"f":0.9,"hasOil":false}]`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${S.geminiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.geminiKey}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
