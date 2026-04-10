@@ -1285,7 +1285,7 @@ Respond ONLY with a JSON array, no markdown, no explanation:
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             contents: [{parts: [{text: prompt}]}],
-            generationConfig: {temperature: 0.1, maxOutputTokens: 1500}
+            generationConfig: {temperature: 0.1, maxOutputTokens: 3000}
           })
         });
         if (attempt.ok) { res = attempt; break; }
@@ -1297,7 +1297,15 @@ Respond ONLY with a JSON array, no markdown, no explanation:
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
+    // Clean markdown fences
+    let clean = text.replace(/```json|```/g, '').trim();
+    // If JSON is truncated, try to close it
+    if (clean && !clean.endsWith(']')) {
+      // Find last complete object (ends with })
+      const lastClose = clean.lastIndexOf('}');
+      if (lastClose > 0) clean = clean.slice(0, lastClose + 1) + ']';
+      else clean = '[]';
+    }
     const items = JSON.parse(clean);
 
     // Convert Gemini response to our parsedItems format
