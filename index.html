@@ -1273,11 +1273,24 @@ Respond ONLY with a JSON array, no markdown, no explanation:
 [{"name":"...","qty":1,"unit":"piece","grams":30,"cal":80,"p":2.7,"c":15,"f":0.9,"hasOil":false}]`;
 
   try {
-    const models = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
-    let res, lastErr;
+  // First check which models are available on this key
+  let availableModel = 'gemini-1.5-flash';
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${S.geminiKey}`);
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const models = (listData.models || []).map(m => m.name.replace('models/',''));
+      const preferred = ['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-1.0-pro','gemini-pro'];
+      const match = preferred.find(p => models.includes(p));
+      if (match) availableModel = match;
+    }
+  } catch(e) { /* use default */ }
+
+    const models = [availableModel, 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.0-pro'];
+    let res = null, lastErr = '';
     for (const model of models) {
       try {
-        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${S.geminiKey}`, {
+        const attempt = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${S.geminiKey}`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
@@ -1285,13 +1298,12 @@ Respond ONLY with a JSON array, no markdown, no explanation:
             generationConfig: {temperature: 0.1, maxOutputTokens: 1500}
           })
         });
-        if (res.ok) break;
-        const errData = await res.json();
+        if (attempt.ok) { res = attempt; break; }
+        const errData = await attempt.json();
         lastErr = errData.error?.message || 'API error';
-        res = null;
-      } catch(e) { lastErr = e.message; res = null; }
+      } catch(e) { lastErr = e.message; }
     }
-    if (!res) throw new Error(lastErr || 'All models failed');
+    if (!res) throw new Error(`${lastErr || 'All models failed'} — tried: ${availableModel}`);
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
