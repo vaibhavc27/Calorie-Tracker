@@ -27,6 +27,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;overscroll-behavior:none}
+body.onboarding{overflow-y:auto;overflow-x:hidden;height:auto;min-height:100%}
 
 /* ── LAYOUT ── */
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
@@ -49,12 +50,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;o
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--acc);color:#0a0a0a;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:var(--fh)}
 
 /* ── ONBOARDING ── */
-.onboard{flex:1;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
+.onboard{display:block;background:var(--bg);min-height:100vh;min-height:100dvh}
 .ob-hero{background:var(--s1);padding:32px 24px 24px;border-bottom:1px solid var(--b1)}
 .ob-logo{font-family:var(--fh);font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--t1);margin-bottom:4px}
 .ob-logo span{color:var(--acc)}
 .ob-tagline{font-size:13px;color:var(--t2)}
-.ob-body{padding:20px 16px;flex:1;max-width:600px;width:100%;margin:0 auto}
+.ob-body{padding:20px 16px 40px;max-width:600px;width:100%;margin:0 auto}
 .ob-step-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:6px;font-family:var(--fm)}
 .ob-step-title{font-family:var(--fh);font-size:22px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px}
 .ob-step-sub{font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.6}
@@ -166,6 +167,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;o
 .pi-source{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
 .src-local{background:var(--green-d);color:var(--green)}
 .src-api{background:var(--blue-d);color:var(--blue)}
+.src-ai{background:rgba(91,156,246,0.2);color:#a78bfa}
 .src-manual{background:var(--orange-d);color:var(--orange)}
 .pi-per-item{background:var(--s3);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .pi-per-label{font-size:10px;color:var(--t3);margin-bottom:4px;font-family:var(--fm)}
@@ -290,6 +292,26 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;o
 .pm-info{flex:1}
 .pm-name{font-size:15px;font-weight:500}
 .pm-sub{font-size:12px;color:var(--t2);margin-top:2px}
+
+/* ── MEAL SUMMARY ── */
+.meal-summary{background:var(--s2);border:1px solid rgba(201,245,96,0.2);border-radius:var(--r2);padding:14px;margin-top:14px}
+.ms-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ms-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-family:var(--fm)}
+.ms-meal-tag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--acc-d);color:var(--acc);font-weight:600;font-family:var(--fm)}
+.ms-total-row{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.ms-total-cal{font-family:var(--fm);font-size:32px;font-weight:500;color:var(--acc);line-height:1}
+.ms-total-lbl{font-size:12px;color:var(--t2)}
+.ms-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.ms-macro{background:var(--s3);border-radius:8px;padding:8px;text-align:center}
+.ms-macro .mv{font-family:var(--fm);font-size:16px;font-weight:500}
+.ms-macro .ml{font-size:10px;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.ms-breakdown{border-top:1px solid var(--b1);padding-top:10px}
+.ms-bd-label{font-size:10px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-family:var(--fm)}
+.ms-bd-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:12px}
+.ms-bd-row:last-child{border-bottom:none}
+.ms-bd-name{color:var(--t1);flex:1;font-weight:500}
+.ms-bd-macros{color:var(--t3);font-family:var(--fm);font-size:10px;margin:0 8px}
+.ms-bd-cal{font-family:var(--fm);color:var(--acc);font-size:12px;font-weight:500;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -352,8 +374,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;o
     <div class="scroll-body">
       <div class="card">
         <div class="card-title">What did you eat?</div>
-        <textarea class="log-textarea" id="log-input" placeholder="Type naturally, e.g.:&#10;4 roti, 3 piece chicken curry, dal&#10;150g paneer, 1 scoop Alpino protein oats&#10;2 anda bhurji with paratha"></textarea>
-        <div class="log-hint">Works with numbers, grams (g/gm), pieces, scoops, katori. <span>Branded products searched automatically.</span></div>
+        <textarea class="log-textarea" id="log-input" placeholder="Type anything naturally:&#10;&#10;Simple → 4 roti, 150g chicken, 150g rice&#10;&#10;Free-form → I ate 1 scoop alpino oats 4 almonds 500ml milk and a banana" oninput="detectParseMode(this.value)"></textarea>
+        <div id="parse-mode-indicator" style="margin-top:6px;font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px;min-height:18px"></div>
         <div style="margin-top:10px;margin-bottom:10px">
           <div class="section-title" style="margin-bottom:6px">Meal slot</div>
           <div class="chip-row" id="meal-slot-chips">
@@ -363,7 +385,10 @@ body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;o
             <div class="chip" data-meal="Dinner" onclick="selectMealChip(this)">Dinner</div>
           </div>
         </div>
-        <button class="btn btn-acc" onclick="parseInput()" id="parse-btn">Parse food</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-acc" style="flex:1" onclick="parseInput()" id="parse-btn">Parse food</button>
+          <button class="btn btn-sm" onclick="setupGeminiKey()" style="color:var(--t3);font-size:11px;white-space:nowrap" title="Set Gemini API key for AI parsing">✦ AI key</button>
+        </div>
         <div id="parse-output" style="margin-top:4px"></div>
       </div>
 
@@ -674,7 +699,7 @@ const SUGGESTIONS = [
 const SK = 'nl_v4';
 function loadState() {
   try { const r = localStorage.getItem(SK); if (r) return JSON.parse(r); } catch(e){}
-  return {profile:null, foods:[], workouts:[], weights:[], goals:{cal:2000,prot:150,carb:250,fat:65}, period:'week'};
+  return {profile:null, foods:[], workouts:[], weights:[], goals:{cal:2000,prot:150,carb:250,fat:65}, period:'week', geminiKey:''};
 }
 function save() { try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e){} }
 let S = loadState();
@@ -734,6 +759,8 @@ function oilPreview(idPrefix) {
   const kcal = calcOilKcal(t,q,u);
   const el = document.getElementById(idPrefix+'-preview');
   if (el) el.textContent = kcal > 0 ? `+${kcal} kcal` : '';
+  // If this is a per-item oil selector, refresh meal summary
+  if (idPrefix.startsWith('pi-oil-')) renderMealSummary();
 }
 
 // ═══════════════════════════════════════════════
@@ -744,8 +771,9 @@ let obStep = 0;
 let obData = {};
 
 function startOnboarding() {
-  document.getElementById('onboard-screen').style.display = 'flex';
+  document.getElementById('onboard-screen').style.display = 'block';
   document.getElementById('app').style.display = 'none';
+  document.body.classList.add('onboarding');
   renderObProgress();
   renderObStep();
 }
@@ -936,6 +964,7 @@ function finishOnboarding() {
 function launchApp() {
   document.getElementById('onboard-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+  document.body.classList.remove('onboarding');
   // Set avatar
   const initials = (S.profile?.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('top-avatar').textContent = initials;
@@ -979,6 +1008,7 @@ function selectMealChip(el) {
   document.querySelectorAll('#meal-slot-chips .chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   activeMealSlot = el.dataset.meal;
+  renderMealSummary();
 }
 
 // Normalise text for matching
@@ -1129,17 +1159,229 @@ async function lookupBranded(item, idx) {
   }
 }
 
+// ═══════════════════════════════════════════════
+// SMART PARSE ROUTER
+// ═══════════════════════════════════════════════
+
+// Gemini API key management
+function setupGeminiKey() {
+  const k = prompt('Enter your free Gemini API key for AI food parsing.\n\nGet one free at: aistudio.google.com\n(Click "Get API key" → "Create API key")\n\nCurrent key:', S.geminiKey||'');
+  if (k !== null) { S.geminiKey = k.trim(); save(); toast(k ? '✦ Gemini key saved' : 'Key cleared'); }
+}
+
+// Decide whether regex can handle this input
+function needsAI(raw) {
+  const lower = raw.toLowerCase().trim();
+  // Clear signals that it's free-form natural language
+  if (/^(i ate|i had|i ate|had|ate|ate)\b/i.test(lower)) return true;
+  // Contains "of" without commas — "1 scoop of alpino"
+  if (lower.includes(' of ') && !lower.includes(',')) return true;
+  // No commas and more than 5 words — likely a sentence
+  const wordCount = lower.split(/\s+/).length;
+  if (!lower.includes(',') && wordCount > 5) return true;
+  // Has "and" connecting items without commas
+  if (/ and /i.test(lower) && !lower.includes(',')) return true;
+  return false;
+}
+
+// Live indicator as user types
+function detectParseMode(val) {
+  const el = document.getElementById('parse-mode-indicator');
+  if (!el || !val.trim()) { el.innerHTML = ''; return; }
+  if (needsAI(val)) {
+    el.innerHTML = S.geminiKey
+      ? `<span style="color:var(--blue)">✦</span> <span>AI parsing will be used</span>`
+      : `<span style="color:var(--orange)">✦</span> <span>AI needed — tap <strong>✦ AI key</strong> to set Gemini key</span>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--green)">◉</span> <span>Local parse — no AI needed</span>`;
+  }
+}
+
 async function parseInput() {
   const raw = document.getElementById('log-input').value.trim();
   if (!raw) { toast('Type what you ate first'); return; }
-  // Split by comma or "and"
-  const parts = raw.split(/,|and\b/i).map(s=>s.trim()).filter(Boolean);
+
+  const btn = document.getElementById('parse-btn');
+  btn.textContent = 'Parsing…';
+  btn.disabled = true;
+
+  try {
+    if (needsAI(raw)) {
+      if (!S.geminiKey) {
+        setupGeminiKey();
+        if (!S.geminiKey) { toast('Gemini key needed for this input'); btn.textContent='Parse food'; btn.disabled=false; return; }
+      }
+      await parseWithGemini(raw);
+    } else {
+      parseWithRegex(raw);
+    }
+  } finally {
+    btn.textContent = 'Parse food';
+    btn.disabled = false;
+  }
+}
+
+// ── REGEX PARSER (simple structured input) ────
+function parseWithRegex(raw) {
+  // Split by comma — commas are the signal for regex mode
+  const parts = raw.split(/,/).map(s => s.trim()).filter(Boolean);
   parsedItems = parts.map(parseItem).filter(Boolean);
   renderParsedItems();
-  // Trigger branded lookups
+  // Trigger branded lookups for any that need it
   parsedItems.forEach((item, idx) => {
     if (item.needsLookup) lookupBranded(item, idx);
   });
+}
+
+// ── GEMINI AI PARSER (free-form natural language) ─
+async function parseWithGemini(raw) {
+  const out = document.getElementById('parse-output');
+  out.innerHTML = `<div style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--t2);font-size:13px">
+    <span style="display:inline-block;width:16px;height:16px;border:2px solid var(--acc);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></span>
+    ✦ AI parsing your meal…
+  </div>`;
+
+  // Build food DB context for better accuracy
+  const dbNames = FOOD_DB.map(f => f.n).join(', ');
+
+  const prompt = `You are a nutrition expert specializing in Indian and global foods. Parse this meal description into individual food items.
+
+Known foods database (use these macros when matched): ${dbNames}
+
+For each food item return:
+- name: clean food name in English
+- qty: number (quantity)
+- unit: piece/g/ml/scoop/katori/bowl/plate/glass/handful/tablespoon
+- grams: estimated total grams for this portion
+- cal: total calories for this portion
+- p: protein grams
+- c: carbohydrate grams  
+- f: fat grams
+- hasOil: true if curry/sabzi/fried (oil already counted in macros)
+
+Indian food reference: roti=30g=80kcal, katori=150g, 1 scoop protein powder=30g=120kcal, badam/almond=6g each=35kcal, kaju/cashew=8g each=46kcal, pista=3g each=17kcal.
+
+Branded products: look up realistic macros (Alpino Protein Oats 1 scoop=40g=167kcal P:20g C:15g F:3g, Tata Muesli 1 scoop=40g=160kcal P:4g C:28g F:4g).
+
+IMPORTANT: Split into INDIVIDUAL items. "4 almonds 4 cashews" = two separate items.
+
+Input: "${raw}"
+
+Respond ONLY with a JSON array, no markdown, no explanation:
+[{"name":"...","qty":1,"unit":"piece","grams":30,"cal":80,"p":2.7,"c":15,"f":0.9,"hasOil":false}]`;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${S.geminiKey}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        contents: [{parts: [{text: prompt}]}],
+        generationConfig: {temperature: 0.1, maxOutputTokens: 1500}
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API error');
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const items = JSON.parse(clean);
+
+    // Convert Gemini response to our parsedItems format
+    parsedItems = items.map(item => ({
+      name:         item.name,
+      displayName:  item.name,
+      qty:          item.qty || 1,
+      unitName:     item.unit || 'piece',
+      qtyLabel:     `${item.qty||1} ${item.unit||'piece'}`,
+      gramsPerUnit: item.grams ? Math.round(item.grams / (item.qty||1)) : null,
+      perUnit: {
+        cal: Math.round((item.cal||0) / (item.qty||1)),
+        p:   parseFloat(((item.p||0) / (item.qty||1)).toFixed(1)),
+        c:   parseFloat(((item.c||0) / (item.qty||1)).toFixed(1)),
+        f:   parseFloat(((item.f||0) / (item.qty||1)).toFixed(1)),
+      },
+      per100: item.grams && item.grams > 0 ? {
+        cal: Math.round((item.cal||0) / item.grams * 100),
+        p:   parseFloat(((item.p||0)  / item.grams * 100).toFixed(1)),
+        c:   parseFloat(((item.c||0)  / item.grams * 100).toFixed(1)),
+        f:   parseFloat(((item.f||0)  / item.grams * 100).toFixed(1)),
+      } : {cal:0,p:0,c:0,f:0},
+      source:  'ai',
+      hasOil:  item.hasOil || false,
+      grams:   item.grams || null,
+      needsLookup: false,
+    }));
+
+    renderParsedItems();
+
+  } catch(e) {
+    out.innerHTML = `<div style="padding:12px;background:var(--red-d);border-radius:var(--r);color:var(--red);font-size:13px">
+      ✕ AI parse failed: ${e.message}<br>
+      <span style="color:var(--t3);font-size:11px;margin-top:4px;display:block">Check your Gemini key or use commas to separate items for local parsing</span>
+    </div>`;
+  }
+}
+
+// Compute totals for all parsed items using current DOM values
+function getMealTotals() {
+  return parsedItems.map((item, idx) => {
+    const qty = parseFloat(document.getElementById(`pi-qty-${idx}`)?.value) ?? item.qty;
+    const cal = parseFloat(document.getElementById(`pi-cal-${idx}`)?.value) ?? item.perUnit.cal;
+    const p   = parseFloat(document.getElementById(`pi-p-${idx}`)?.value)   ?? item.perUnit.p;
+    const c   = parseFloat(document.getElementById(`pi-c-${idx}`)?.value)   ?? item.perUnit.c;
+    const f   = parseFloat(document.getElementById(`pi-f-${idx}`)?.value)   ?? item.perUnit.f;
+    const oilType = document.getElementById(`pi-oil-${idx}-type`)?.value || 'none';
+    const oilQty  = parseFloat(document.getElementById(`pi-oil-${idx}-qty`)?.value)||0;
+    const oilUnit = document.getElementById(`pi-oil-${idx}-unit`)?.value||'tbsp';
+    const oilCal  = calcOilKcal(oilType, oilQty, oilUnit);
+    return {
+      name: item.displayName || item.name,
+      cal:  ri(cal * qty) + oilCal,
+      p:    rf(p * qty),
+      c:    rf(c * qty),
+      f:    rf(f * qty),
+      qty, unitName: item.unitName,
+    };
+  });
+}
+
+function renderMealSummary() {
+  const totals = getMealTotals();
+  const sumCal = totals.reduce((s,t)=>s+t.cal,0);
+  const sumP   = rf(totals.reduce((s,t)=>s+t.p,0));
+  const sumC   = rf(totals.reduce((s,t)=>s+t.c,0));
+  const sumF   = rf(totals.reduce((s,t)=>s+t.f,0));
+
+  // Update meal summary block if it exists
+  const el = document.getElementById('meal-summary-block');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="ms-header">
+      <div class="ms-title">Meal total</div>
+      <div class="ms-meal-tag">${activeMealSlot}</div>
+    </div>
+    <div class="ms-total-row">
+      <div class="ms-total-cal">${ri(sumCal)}</div>
+      <div class="ms-total-lbl">kcal total</div>
+    </div>
+    <div class="ms-macros">
+      <div class="ms-macro"><div class="mv" style="color:var(--blue)">${sumP}g</div><div class="ml">Protein</div></div>
+      <div class="ms-macro"><div class="mv" style="color:var(--amber)">${sumC}g</div><div class="ml">Carbs</div></div>
+      <div class="ms-macro"><div class="mv" style="color:var(--orange)">${sumF}g</div><div class="ml">Fat</div></div>
+    </div>
+    <div class="ms-breakdown">
+      <div class="ms-bd-label">Breakdown by item</div>
+      ${totals.map(t=>`
+        <div class="ms-bd-row">
+          <div class="ms-bd-name">${t.name}</div>
+          <div class="ms-bd-macros">P:${t.p} C:${t.c} F:${t.f}</div>
+          <div class="ms-bd-cal">${t.cal} kcal</div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function renderParsedItems() {
@@ -1149,13 +1391,13 @@ function renderParsedItems() {
   let html = `<div class="parsed-list fade-up">`;
   parsedItems.forEach((item, idx) => {
     const total = {
-      cal: ri((parseFloat(document.querySelector(`#pi-cal-${idx}`)?.value) || item.perUnit.cal) * (parseFloat(document.querySelector(`#pi-qty-${idx}`)?.value) || item.qty)),
-      p:   rf((parseFloat(document.querySelector(`#pi-p-${idx}`)?.value)   || item.perUnit.p)   * (parseFloat(document.querySelector(`#pi-qty-${idx}`)?.value) || item.qty)),
-      c:   rf((parseFloat(document.querySelector(`#pi-c-${idx}`)?.value)   || item.perUnit.c)   * (parseFloat(document.querySelector(`#pi-qty-${idx}`)?.value) || item.qty)),
-      f:   rf((parseFloat(document.querySelector(`#pi-f-${idx}`)?.value)   || item.perUnit.f)   * (parseFloat(document.querySelector(`#pi-qty-${idx}`)?.value) || item.qty)),
+      cal: ri(item.perUnit.cal * item.qty),
+      p:   rf(item.perUnit.p   * item.qty),
+      c:   rf(item.perUnit.c   * item.qty),
+      f:   rf(item.perUnit.f   * item.qty),
     };
-    const srcClass = item.source==='local'?'src-local':item.source==='api'?'src-api':'src-manual';
-    const srcLabel = item.source==='local'?'local DB':item.source==='api'?'API found':'manual';
+    const srcClass = item.source==='local'?'src-local':item.source==='api'?'src-api':item.source==='ai'?'src-ai':'src-manual';
+    const srcLabel = item.source==='local'?'local DB':item.source==='api'?'API':item.source==='ai'?'✦ AI':'manual';
 
     html += `<div class="parsed-item" id="pi-card-${idx}">
       <div class="pi-header">
@@ -1171,7 +1413,7 @@ function renderParsedItems() {
           <span style="font-size:12px;color:var(--t2)">${item.unitName}${item.gramsPerUnit?` (~${item.gramsPerUnit}g each)`:''}${item.hasOil?' · moderate oil included':''}</span>
           ${item.needsLookup&&item.source!=='api'?`<button class="btn btn-xs" id="pi-lookup-${idx}" onclick="lookupBranded(parsedItems[${idx}],${idx})">Search product</button>`:''}
         </div>
-        ${item.gramsPerUnit ? `<div style="font-size:11px;color:var(--t3);margin-top:4px">Total: ${ri((parseFloat(document.querySelector('#pi-qty-'+idx)?.value)||item.qty)*item.gramsPerUnit)}g</div>` : ''}
+        ${item.gramsPerUnit ? `<div style="font-size:11px;color:var(--t3);margin-top:4px">Total: ${ri(item.qty*item.gramsPerUnit)}g</div>` : ''}
       </div>
 
       <div class="pi-per-item">
@@ -1202,12 +1444,15 @@ function renderParsedItems() {
   });
 
   html += `</div>
+  <div class="meal-summary" id="meal-summary-block"></div>
   <div style="display:flex;gap:8px;margin-top:10px">
-    <button class="btn btn-acc" onclick="addAllParsed()">Add all to ${activeMealSlot}</button>
+    <button class="btn btn-acc" onclick="addAllParsed()">Log all to ${activeMealSlot}</button>
     <button class="btn btn-sm" onclick="parsedItems=[];renderParsedItems();document.getElementById('log-input').value=''">Clear</button>
   </div>`;
 
   out.innerHTML = html;
+  // Render summary after DOM is set
+  setTimeout(renderMealSummary, 0);
 }
 
 function recalcItem(idx) {
@@ -1222,6 +1467,12 @@ function recalcItem(idx) {
     el.innerHTML = `<span class="pi-total-label">Total (${qty} × ${item.unitName})</span>
       <span class="pi-total-val">${ri(cal*qty)} kcal · P:${rf(p*qty)}g C:${rf(c*qty)}g F:${rf(f*qty)}g</span>`;
   }
+  // Update gram display
+  if (item?.gramsPerUnit) {
+    const grEl = document.querySelector(`#pi-card-${idx} .pi-total`);
+    // refresh total grams label inline (already in pi-total row above)
+  }
+  renderMealSummary();
 }
 
 function removeParsed(idx) {
