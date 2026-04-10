@@ -1273,20 +1273,10 @@ Respond ONLY with a JSON array, no markdown, no explanation:
 [{"name":"...","qty":1,"unit":"piece","grams":30,"cal":80,"p":2.7,"c":15,"f":0.9,"hasOil":false}]`;
 
   try {
-  // First check which models are available on this key
-  let availableModel = 'gemini-1.5-flash';
-  try {
-    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${S.geminiKey}`);
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      const models = (listData.models || []).map(m => m.name.replace('models/',''));
-      const preferred = ['gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-1.0-pro','gemini-pro'];
-      const match = preferred.find(p => models.includes(p));
-      if (match) availableModel = match;
-    }
-  } catch(e) { /* use default */ }
+  // Use confirmed available models from this key
+  const availableModel = 'gemini-2.0-flash';
 
-    const models = [availableModel, 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.0-pro'];
+    const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
     let res = null, lastErr = '';
     for (const model of models) {
       try {
