@@ -1243,39 +1243,37 @@ async function parseWithGemini(raw) {
     ✦ AI parsing your meal…
   </div>`;
 
-  // Build food DB context for better accuracy
-  const dbNames = FOOD_DB.map(f => f.n).join(', ');
+  const prompt = `Parse this meal into individual food items. Return ONLY a compact JSON array.
 
-  const prompt = `You are a nutrition expert specializing in Indian and global foods. Parse this meal description into individual food items.
+Rules:
+- Split every distinct food into its own object
+- qty = number of units eaten
+- unit = scoop/piece/katori/g/ml/handful/slice/bowl
+- gramsPerUnit = grams for ONE unit (e.g. 1 scoop=40g, 1 piece almond=1.2g, 1 katori=150g)
+- cal/p/c/f = macros for ONE unit only (not total)
+- hasOil = true only for curries, sabzi, fried items
 
-Known foods database (use these macros when matched): ${dbNames}
+Accurate reference values per single unit:
+- almond/badam: 1 piece=1.2g, cal:7, p:0.3, c:0.3, f:0.6
+- cashew/kaju: 1 piece=3g, cal:17, p:0.5, c:0.9, f:1.4
+- pistachio/pista: 1 piece=0.6g, cal:3, p:0.1, c:0.4, f:0.3
+- banana: 1 piece=120g, cal:107, p:1.3, c:27, f:0.4
+- apple: 1 piece=150g, cal:78, p:0.4, c:21, f:0.2
+- blueberries handful: 1 handful=30g, cal:17, p:0.2, c:4.3, f:0.1
+- milk 500ml: 1 ml=0.6cal — use grams=515 for 500ml, cal:309, p:16, c:24, f:16 total for 500ml
+- Alpino Protein Oats: 1 scoop=40g, cal:167, p:20, c:15, f:3
+- Tata Muesli: 1 scoop=45g, cal:180, p:5, c:32, f:4
+- ON Whey/whey protein: 1 scoop=30g, cal:120, p:24, c:3, f:2
+- roti/chapati: 1 piece=30g, cal:80, p:2.7, c:15, f:0.9
 
-For each food item return:
-- name: clean food name in English
-- qty: number (quantity)
-- unit: piece/g/ml/scoop/katori/bowl/plate/glass/handful/tablespoon
-- grams: estimated total grams for this portion
-- cal: total calories for this portion
-- p: protein grams
-- c: carbohydrate grams  
-- f: fat grams
-- hasOil: true if curry/sabzi/fried (oil already counted in macros)
-
-Indian food reference: roti=30g=80kcal, katori=150g, 1 scoop protein powder=30g=120kcal, badam/almond=6g each=35kcal, kaju/cashew=8g each=46kcal, pista=3g each=17kcal.
-
-Branded products: look up realistic macros (Alpino Protein Oats 1 scoop=40g=167kcal P:20g C:15g F:3g, Tata Muesli 1 scoop=40g=160kcal P:4g C:28g F:4g).
-
-IMPORTANT: Split into INDIVIDUAL items. "4 almonds 4 cashews" = two separate items.
+IMPORTANT: For milk, blueberries, and any volume item — give TOTAL macros in cal/p/c/f for the stated amount, set qty=1, unit="serving".
 
 Input: "${raw}"
 
-Respond ONLY with a JSON array, no markdown, no explanation:
-[{"name":"...","qty":1,"unit":"piece","grams":30,"cal":80,"p":2.7,"c":15,"f":0.9,"hasOil":false}]`;
+JSON only, no explanation, compact format:
+[{"name":"almond","qty":4,"unit":"piece","gramsPerUnit":1.2,"cal":7,"p":0.3,"c":0.3,"f":0.6,"hasOil":false}]`;
 
   try {
-  // Use confirmed available models from this key
-  const availableModel = 'gemini-2.5-flash';
-
     const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest'];
     let res = null, lastErr = '';
     for (const model of models) {
@@ -1285,7 +1283,7 @@ Respond ONLY with a JSON array, no markdown, no explanation:
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             contents: [{parts: [{text: prompt}]}],
-            generationConfig: {temperature: 0.1, maxOutputTokens: 3000}
+            generationConfig: {temperature: 0.1, maxOutputTokens: 4000}
           })
         });
         if (attempt.ok) { res = attempt; break; }
@@ -1293,55 +1291,107 @@ Respond ONLY with a JSON array, no markdown, no explanation:
         lastErr = errData.error?.message || 'API error';
       } catch(e) { lastErr = e.message; }
     }
-    if (!res) throw new Error(`${lastErr || 'All models failed'} — tried: ${availableModel}`);
+    if (!res) throw new Error(lastErr || 'All models failed');
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    // Clean markdown fences
     let clean = text.replace(/```json|```/g, '').trim();
-    // If JSON is truncated, try to close it
+    // Fix truncated JSON
     if (clean && !clean.endsWith(']')) {
-      // Find last complete object (ends with })
       const lastClose = clean.lastIndexOf('}');
       if (lastClose > 0) clean = clean.slice(0, lastClose + 1) + ']';
       else clean = '[]';
     }
     const items = JSON.parse(clean);
+    if (!items.length) throw new Error('No items parsed — try rephrasing');
 
-    // Convert Gemini response to our parsedItems format
-    parsedItems = items.map(item => ({
-      name:         item.name,
-      displayName:  item.name,
-      qty:          item.qty || 1,
-      unitName:     item.unit || 'piece',
-      qtyLabel:     `${item.qty||1} ${item.unit||'piece'}`,
-      gramsPerUnit: item.grams ? Math.round(item.grams / (item.qty||1)) : null,
-      perUnit: {
-        cal: Math.round((item.cal||0) / (item.qty||1)),
-        p:   parseFloat(((item.p||0) / (item.qty||1)).toFixed(1)),
-        c:   parseFloat(((item.c||0) / (item.qty||1)).toFixed(1)),
-        f:   parseFloat(((item.f||0) / (item.qty||1)).toFixed(1)),
-      },
-      per100: item.grams && item.grams > 0 ? {
-        cal: Math.round((item.cal||0) / item.grams * 100),
-        p:   parseFloat(((item.p||0)  / item.grams * 100).toFixed(1)),
-        c:   parseFloat(((item.c||0)  / item.grams * 100).toFixed(1)),
-        f:   parseFloat(((item.f||0)  / item.grams * 100).toFixed(1)),
-      } : {cal:0,p:0,c:0,f:0},
-      source:  'ai',
-      hasOil:  item.hasOil || false,
-      grams:   item.grams || null,
-      needsLookup: false,
-    }));
+    // Convert to parsedItems format — cal/p/c/f from Gemini are already PER UNIT
+    parsedItems = items.map(item => {
+      const qty = item.qty || 1;
+      const gpu = item.gramsPerUnit || (item.grams ? item.grams / qty : null);
+      return {
+        name:         item.name,
+        displayName:  item.name,
+        qty,
+        unitName:     item.unit || 'piece',
+        qtyLabel:     `${qty} ${item.unit||'piece'}`,
+        gramsPerUnit: gpu ? Math.round(gpu * 10) / 10 : null,
+        perUnit: {
+          cal: Math.round(item.cal || 0),
+          p:   parseFloat((item.p || 0).toFixed(1)),
+          c:   parseFloat((item.c || 0).toFixed(1)),
+          f:   parseFloat((item.f || 0).toFixed(1)),
+        },
+        per100: gpu && gpu > 0 ? {
+          cal: Math.round((item.cal||0) / gpu * 100),
+          p:   parseFloat(((item.p||0) / gpu * 100).toFixed(1)),
+          c:   parseFloat(((item.c||0) / gpu * 100).toFixed(1)),
+          f:   parseFloat(((item.f||0) / gpu * 100).toFixed(1)),
+        } : {cal:0,p:0,c:0,f:0},
+        source:      'ai',
+        hasOil:      item.hasOil || false,
+        grams:       gpu ? Math.round(gpu * qty * 10) / 10 : null,
+        needsLookup: false,
+      };
+    });
 
     renderParsedItems();
+
+    // Background: verify branded items via Open Food Facts
+    parsedItems.forEach((item, idx) => {
+      const branded = /alpino|muscleblaze|quaker|tata|nestle|amul|on whey|optimum|patanjali|britannia|kellogg|dabur|haldiram/i.test(item.name);
+      if (branded) verifyWithOFF(item, idx);
+    });
 
   } catch(e) {
     out.innerHTML = `<div style="padding:12px;background:var(--red-d);border-radius:var(--r);color:var(--red);font-size:13px">
       ✕ AI parse failed: ${e.message}<br>
-      <span style="color:var(--t3);font-size:11px;margin-top:4px;display:block">Check your Gemini key or use commas to separate items for local parsing</span>
+      <span style="color:var(--t3);font-size:11px;margin-top:4px;display:block">Try adding commas between items, or check your Gemini API key</span>
     </div>`;
   }
+}
+
+// Verify branded product macros via Open Food Facts silently in background
+async function verifyWithOFF(item, idx) {
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(item.name)}&search_simple=1&action=process&json=1&page_size=3&fields=product_name,nutriments,serving_size,serving_quantity`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const p = (data.products||[]).find(x => x.nutriments?.['energy-kcal_100g'] != null);
+    if (!p) return;
+    const nm = p.nutriments;
+    const servG = parseFloat(p.serving_quantity) || parseFloat(p.serving_size) || item.gramsPerUnit || 30;
+    // Update the item's per100 and perUnit with real label data
+    const newPer100 = {
+      cal: Math.round(nm['energy-kcal_100g']||0),
+      p:   parseFloat((nm['proteins_100g']||0).toFixed(1)),
+      c:   parseFloat((nm['carbohydrates_100g']||0).toFixed(1)),
+      f:   parseFloat((nm['fat_100g']||0).toFixed(1)),
+    };
+    parsedItems[idx].per100 = newPer100;
+    parsedItems[idx].gramsPerUnit = servG;
+    parsedItems[idx].perUnit = {
+      cal: Math.round(newPer100.cal * servG / 100),
+      p:   parseFloat((newPer100.p * servG / 100).toFixed(1)),
+      c:   parseFloat((newPer100.c * servG / 100).toFixed(1)),
+      f:   parseFloat((newPer100.f * servG / 100).toFixed(1)),
+    };
+    parsedItems[idx].source = 'api';
+    // Update DOM fields live
+    const calEl = document.getElementById(`pi-cal-${idx}`);
+    const pEl   = document.getElementById(`pi-p-${idx}`);
+    const cEl   = document.getElementById(`pi-c-${idx}`);
+    const fEl   = document.getElementById(`pi-f-${idx}`);
+    if (calEl) calEl.value = parsedItems[idx].perUnit.cal;
+    if (pEl)   pEl.value   = parsedItems[idx].perUnit.p;
+    if (cEl)   cEl.value   = parsedItems[idx].perUnit.c;
+    if (fEl)   fEl.value   = parsedItems[idx].perUnit.f;
+    recalcItem(idx);
+    // Update source badge
+    const badge = document.querySelector(`#pi-card-${idx} .pi-source`);
+    if (badge) { badge.textContent = '✓ label'; badge.className = 'pi-source src-api'; }
+    toast(`✓ ${item.name} macros verified from product label`);
+  } catch(e) { /* silently fail, keep AI values */ }
 }
 
 // Compute totals for all parsed items using current DOM values
@@ -1422,16 +1472,24 @@ function renderParsedItems() {
         <div class="pi-name">${item.displayName}</div>
         <span class="pi-source ${srcClass}">${srcLabel}</span>
       </div>
-      ${item.hasOil ? `<div style="font-size:11px;color:var(--orange);margin-bottom:6px">⚠ Oil already in macros (moderate assumed)</div>` : ''}
+      ${item.hasOil ? `<div style="font-size:11px;color:var(--orange);margin-bottom:6px">⚠ Oil already counted in macros</div>` : ''}
 
       <div style="margin-bottom:6px">
-        <div style="font-size:10px;color:var(--t3);margin-bottom:4px;font-family:var(--fm)">QUANTITY</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:6px;font-family:var(--fm)">QUANTITY — change either field, the other updates automatically</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <input type="number" id="pi-qty-${idx}" value="${item.qty}" min="0.5" step="0.5" style="width:60px;background:var(--s3);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--fm);font-size:14px;padding:5px 8px;outline:none;text-align:center" oninput="recalcItem(${idx})">
-          <span style="font-size:12px;color:var(--t2)">${item.unitName}${item.gramsPerUnit?` (~${item.gramsPerUnit}g each)`:''}${item.hasOil?' · moderate oil included':''}</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <input type="number" id="pi-qty-${idx}" value="${item.qty}" min="0.1" step="0.5" style="width:65px;background:var(--s3);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--fm);font-size:14px;padding:5px 8px;outline:none;text-align:center" oninput="syncQtyToGrams(${idx})">
+            <span style="font-size:12px;color:var(--t2)">${item.unitName}</span>
+          </div>
+          ${item.gramsPerUnit ? `
+          <span style="font-size:11px;color:var(--t3)">↔</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <input type="number" id="pi-grams-${idx}" value="${rf(item.qty * item.gramsPerUnit)}" min="1" step="1" style="width:70px;background:var(--s3);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--fm);font-size:14px;padding:5px 8px;outline:none;text-align:center" oninput="syncGramsToQty(${idx})">
+            <span style="font-size:12px;color:var(--t2)">g</span>
+          </div>
+          <span style="font-size:11px;color:var(--t3)">(${item.gramsPerUnit}g per ${item.unitName})</span>` : ''}
           ${item.needsLookup&&item.source!=='api'?`<button class="btn btn-xs" id="pi-lookup-${idx}" onclick="lookupBranded(parsedItems[${idx}],${idx})">Search product</button>`:''}
         </div>
-        ${item.gramsPerUnit ? `<div style="font-size:11px;color:var(--t3);margin-top:4px">Total: ${ri(item.qty*item.gramsPerUnit)}g</div>` : ''}
       </div>
 
       <div class="pi-per-item">
@@ -1491,6 +1549,35 @@ function recalcItem(idx) {
     // refresh total grams label inline (already in pi-total row above)
   }
   renderMealSummary();
+}
+
+// Qty changed → update grams field, recalc totals
+function syncQtyToGrams(idx) {
+  const item = parsedItems[idx];
+  const qty = parseFloat(document.getElementById(`pi-qty-${idx}`)?.value) || 0;
+  if (item?.gramsPerUnit) {
+    const gramsEl = document.getElementById(`pi-grams-${idx}`);
+    if (gramsEl) gramsEl.value = rf(qty * item.gramsPerUnit);
+  }
+  recalcItem(idx);
+}
+
+// Grams changed → update qty field AND scale per-unit macros, recalc totals
+function syncGramsToQty(idx) {
+  const item = parsedItems[idx];
+  if (!item?.gramsPerUnit || !item.per100) return;
+  const grams = parseFloat(document.getElementById(`pi-grams-${idx}`)?.value) || 0;
+  const newQty = rf(grams / item.gramsPerUnit);
+
+  // Update qty field
+  const qtyEl = document.getElementById(`pi-qty-${idx}`);
+  if (qtyEl) qtyEl.value = newQty;
+
+  // Scale per-unit macros proportionally from per100 values
+  // New gramsPerUnit = grams (since qty becomes 1 effective unit)
+  // Actually: keep per-unit as per original unit, just change qty
+  // Recalc will multiply qty × perUnit
+  recalcItem(idx);
 }
 
 function removeParsed(idx) {
